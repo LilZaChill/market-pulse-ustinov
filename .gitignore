@@ -19,3 +19,10 @@ logs/
 
 # Claude Code tooling config — not part of the seminar material
 .claude/
+
+# Generated jcstress reports and raw run data
+**/jcstress-results/
+**/jcstress-results-*.bin.gz
+
+# Temporary Office lock files
+~$*
