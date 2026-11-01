@@ -28,9 +28,23 @@ public final class UncaughtExceptionDemo {
         try {
             Thread.setDefaultUncaughtExceptionHandler((thread, error) ->
                     System.out.println("default handler: " + thread.getName() + ": " + error));
-            Thread other = Thread.ofPlatform().name("default-handler-worker")
-                    .start(UncaughtExceptionDemo::fail);
+            // Это делегирование при отсутствии индивидуального handler, не вызов всех обработчиков.
+            ThreadGroup group = new ThreadGroup("demo-group") {
+                @Override
+                public void uncaughtException(Thread thread, Throwable error) {
+                    System.out.println("ThreadGroup: " + thread.getName() + ", делегируем родителю");
+                    super.uncaughtException(thread, error);
+                }
+            };
+            Thread other = new Thread(group, UncaughtExceptionDemo::fail, "group-handler-worker");
+            other.start();
             other.join();
+            // Явный handler завершает обработку: group/default автоматически после него не вызываются.
+            Thread individual = new Thread(group, UncaughtExceptionDemo::fail, "individual-handler-worker");
+            individual.setUncaughtExceptionHandler((thread, error) ->
+                    System.out.println("Только индивидуальный handler: " + thread.getName()));
+            individual.start();
+            individual.join();
         } finally {
             Thread.setDefaultUncaughtExceptionHandler(previous); // настройка общая для JVM
         }

@@ -1,14 +1,36 @@
 package academy.backend.market_pulse.jmm;
-import org.openjdk.jcstress.annotations.*;
-import org.openjdk.jcstress.infra.results.*;
-import static org.openjdk.jcstress.annotations.Expect.*;
+
+import org.openjdk.jcstress.annotations.Actor;
+import org.openjdk.jcstress.annotations.Expect;
+import org.openjdk.jcstress.annotations.JCStressTest;
+import org.openjdk.jcstress.annotations.Outcome;
+import org.openjdk.jcstress.annotations.State;
+import org.openjdk.jcstress.infra.results.I_Result;
+
+/** Специальная гарантия final: конструктор не публикует this. */
 @JCStressTest
-@Outcome(id={"-1", "42"}, expect=ACCEPTABLE, desc="Нет объекта или корректное final-поле")
-@Outcome(expect=FORBIDDEN, desc="Частично сконструированный объект запрещён для final-поля")
+@Outcome(id = {"-1", "42"}, expect = Expect.ACCEPTABLE, desc = "Нет объекта или корректное final-поле")
+@Outcome(expect = Expect.FORBIDDEN, desc = "Частично сконструированный объект запрещён для final-поля")
 @State
 public class FinalPublication {
-    static class Holder { final int value; Holder() { value=42; } }
-    Holder holder;
-    @Actor public void writer() { holder=new Holder(); }
-    @Actor public void reader(I_Result r) { Holder h=holder; r.r1=h==null ? -1 : h.value; }
+    private Holder holder;
+
+    @Actor
+    public void writer() {
+        holder = new Holder();
+    }
+
+    @Actor
+    public void reader(I_Result result) {
+        Holder observed = holder;
+        result.r1 = observed == null ? -1 : observed.value;
+    }
+
+    private static final class Holder {
+        private final int value;
+
+        private Holder() {
+            value = 42;
+        }
+    }
 }

@@ -1,13 +1,17 @@
 # Эксперименты Java Memory Model
 
-Все тесты находятся в отдельном проекте `jcstress`, сборка не меняет обычный `mvn test`.
+Эксперименты находятся в модуле `jcstress` общего Maven-проекта, рядом с модулем приложения
+`advanced`. После импорта корневого pom.xml IDEA видит оба модуля. Исходники в
+`jcstress/src/main/java/academy/backend/market_pulse/jmm` — jcstress-опыты, не JUnit-тесты:
+обычный `mvn test` компилирует их, но не запускает стресс-эксперименты. Раннер запускается явно.
+Выделенный модуль позволяет не добавлять зависимости и сгенерированные раннеры в приложение.
 
 ## Сборка и запуск
 
 Из корня advanced-репозитория:
 
 ```bash
-mvn -f jcstress/pom.xml package
+mvn -pl jcstress -am package -DskipTests
 cd jcstress
 java -jar target/jcstress.jar -t 'academy.backend.market_pulse.jmm.*' -m quick -f 1 -iters 2 -time 100 -c 2 -hs 128 -af NONE -jvmArgs '-Xms128m -Xmx128m' -r results
 ```
@@ -17,7 +21,7 @@ java -jar target/jcstress.jar -t 'academy.backend.market_pulse.jmm.*' -m quick -
 показа, не доказательство отсутствия запрещённых исходов. jcstress использует локальный сокет
 связи с дочерними JVM, поэтому не запускать внутри среды, запрещающей открывать порты.
 
-Версия jcstress — 0.16; исходники экспериментов компилируются с release 17, запускаются JDK 25.
+Версия jcstress — 0.16; модуль наследует JDK/release 25 и настройки компилятора из корневого pom.xml.
 Heap начальный и максимальный согласованы: это важно для forked JVM. `-af NONE` отключает
 привязку CPU, недоступную на части ОС. Аппаратная архитектура влияет на наблюдаемые частоты.
 

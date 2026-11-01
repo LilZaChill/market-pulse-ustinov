@@ -3,7 +3,10 @@ package academy.backend.market_pulse.demo.concurrency;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.locks.LockSupport;
 
-/** Сравнение флага при park, sleep и непрерываемом захвате монитора. */
+/**
+ * Сравнение флага при park, sleep и непрерываемом захвате монитора.
+ * HTTP-примеры: {@link HttpInterruptDemo} (оба клиента или отдельный режим).
+ */
 public final class InterruptDemo {
     public static void main(String[] args) throws InterruptedException {
         Thread sleeper = Thread.ofPlatform().name("sleep-interrupt").start(() -> {
