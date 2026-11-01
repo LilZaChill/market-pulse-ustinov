@@ -1,19 +1,30 @@
 package academy.backend.market_pulse.config;
 
 import java.math.BigDecimal;
+import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 import lombok.Getter;
 
+import academy.backend.market_pulse.client.TInvestApiClient;
+import academy.backend.market_pulse.client.impl.HttpClientTInvestApiClient;
 import academy.backend.market_pulse.factory.InstrumentFactories;
+import academy.backend.market_pulse.history.PriceHistoryStore;
+import academy.backend.market_pulse.history.impl.PriceHistoryStoreReference;
 import academy.backend.market_pulse.model.Currency;
 import academy.backend.market_pulse.model.Instrument;
 import academy.backend.market_pulse.model.Quote;
 import academy.backend.market_pulse.model.Watchlist;
+import academy.backend.market_pulse.repository.FileBackedQuoteRepository;
 import academy.backend.market_pulse.repository.InMemoryInstrumentRepository;
 import academy.backend.market_pulse.repository.InstrumentRepository;
+import academy.backend.market_pulse.repository.QuoteFileWatcher;
+import academy.backend.market_pulse.repository.store.QuoteFileStore;
+import academy.backend.market_pulse.repository.store.WatchlistStore;
+import academy.backend.market_pulse.repository.store.impl.QuoteFileStoreReference;
+import academy.backend.market_pulse.repository.store.impl.WatchlistStoreReference;
 import academy.backend.market_pulse.service.QuoteService;
 import academy.backend.market_pulse.service.QuoteSource;
 
@@ -29,7 +40,17 @@ public class AppConfig {
     private final QuoteSource quoteSource;
     private final QuoteService quoteService;
 
+    private final WatchlistStore watchlistStore;
+    private final Path watchlistPath;
     private final Watchlist watchlist;
+
+    private final TInvestApiClient apiClient;
+
+    private final QuoteFileStore quoteFileStore;
+    private final FileBackedQuoteRepository fileBackedQuoteRepository;
+
+    private final PriceHistoryStore priceHistoryStore;
+    private final Path historyDirectory;
 
     private final Map<String, List<BigDecimal>> priceHistory;
 
@@ -38,7 +59,32 @@ public class AppConfig {
         this.quoteSource = new QuoteSource(sampleQuotes(instrumentRepository));
         this.quoteService = new QuoteService(quoteSource);
 
-        this.watchlist = new Watchlist();
+        // Watchlist переживает перезапуск CLI — читается при старте, дописывается на диск сразу
+        // при изменении (см. WatchCommand).
+        this.watchlistStore = new WatchlistStoreReference();
+        this.watchlistPath = Path.of("data", "watchlist.json");
+        this.watchlist = new Watchlist(watchlistStore.load(watchlistPath));
+
+        // Семинар 7: клиент к instruments-service (моковый сервер в Docker, см.
+        // docker/mockserver) — настройки отдельным классом, клиент создаётся один раз здесь и
+        // дальше инжектится через конструктор.
+        // Переменная окружения MARKET_PULSE_MOCK_SCENARIO (error | timeout | ok) включает сбой на
+        // стороне мокового сервера: MARKET_PULSE_MOCK_SCENARIO=error java ... update
+        TInvestApiProperties properties = TInvestApiProperties.localMock()
+                .withMockScenario(System.getenv("MARKET_PULSE_MOCK_SCENARIO"));
+        this.apiClient = new HttpClientTInvestApiClient(properties);
+
+        // Самостоятельная работа (см. «Требования к файловому хранилищу.md»): котировки
+        // отслеживаемых инструментов — на диске, а не только в памяти процесса.
+        // QuoteFileStoreReference — эталон для сверки в начале семинара 8.
+        this.quoteFileStore = new QuoteFileStoreReference();
+        this.fileBackedQuoteRepository =
+                new FileBackedQuoteRepository(quoteFileStore, Path.of("data", "quotes.json"));
+        new QuoteFileWatcher(fileBackedQuoteRepository).start();
+
+        // История цен — для будущей статистики: новая точка (новый файл) на каждое update.
+        this.priceHistoryStore = new PriceHistoryStoreReference();
+        this.historyDirectory = Path.of("data", "history");
 
         this.priceHistory = samplePriceHistory();
     }

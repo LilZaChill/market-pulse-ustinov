@@ -19,11 +19,15 @@ public final class CommandLineFactory {
                 .addSubcommand(new SearchCommand(config.getInstrumentRepository()))
                 .addSubcommand(new AddCommand(config.getInstrumentRepository()))
                 .addSubcommand(new ListCommand(config.getInstrumentRepository()))
-                .addSubcommand(new WatchCommand(config.getWatchlist()))
+                .addSubcommand(new WatchCommand(config.getWatchlist(), config.getWatchlistStore(),
+                        config.getWatchlistPath()))
                 .addSubcommand(new QuoteCommand(config.getQuoteService()))
                 .addSubcommand(new StatsCommand(config.getQuoteSource()))
                 .addSubcommand(new CompareCommand(config.getQuoteService()))
                 .addSubcommand(new MoversCommand(config.getQuoteSource()))
-                .addSubcommand(new HistoryCommand(config.getPriceHistory()));
+                .addSubcommand(new HistoryCommand(config.getPriceHistory()))
+                .addSubcommand(new UpdateCommand(config.getApiClient(), config.getWatchlist(),
+                        config.getFileBackedQuoteRepository(), config.getPriceHistoryStore(),
+                        config.getHistoryDirectory()));
     }
 }
