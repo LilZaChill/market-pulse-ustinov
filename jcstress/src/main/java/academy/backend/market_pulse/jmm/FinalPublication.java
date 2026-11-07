@@ -7,10 +7,16 @@ import org.openjdk.jcstress.annotations.Outcome;
 import org.openjdk.jcstress.annotations.State;
 import org.openjdk.jcstress.infra.results.I_Result;
 
-/** Специальная гарантия final: конструктор не публикует this. */
+/**
+ * Корректное конструирование даёт специальные гарантии final-полю.
+ *
+ * <p>Ссылка holder обычная: читатель может не увидеть объект, но не должен увидеть value == 0.
+ */
 @JCStressTest
-@Outcome(id = {"-1", "42"}, expect = Expect.ACCEPTABLE, desc = "Нет объекта или корректное final-поле")
-@Outcome(expect = Expect.FORBIDDEN, desc = "Частично сконструированный объект запрещён для final-поля")
+@Outcome(id = "-1", expect = Expect.ACCEPTABLE, desc = "Читатель не увидел ссылку на объект")
+@Outcome(id = "42", expect = Expect.ACCEPTABLE, desc = "Объект виден с корректно инициализированным final-полем")
+@Outcome(id = "0", expect = Expect.FORBIDDEN, desc = "Final-поле не должно содержать значение по умолчанию")
+@Outcome(expect = Expect.FORBIDDEN, desc = "Прочие исходы")
 @State
 public class FinalPublication {
     private Holder holder;
@@ -22,6 +28,7 @@ public class FinalPublication {
 
     @Actor
     public void reader(I_Result result) {
+        // Одно чтение ссылки: повторное plain-чтение — уже другой эксперимент.
         Holder observed = holder;
         result.r1 = observed == null ? -1 : observed.value;
     }

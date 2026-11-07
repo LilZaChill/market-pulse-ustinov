@@ -8,10 +8,14 @@ import org.openjdk.jcstress.annotations.Outcome;
 import org.openjdk.jcstress.annotations.State;
 import org.openjdk.jcstress.infra.results.I_Result;
 
-/** Составной инкремент: volatile не заменяет атомарное read-modify-write. */
+/**
+ * Volatile обеспечивает видимость, но не атомарность составного counter++.
+ *
+ * <p>Чтение, вычисление и запись остаются отдельными действиями; обновление может потеряться.
+ */
 @JCStressTest
-@Outcome(id = "2", expect = Expect.ACCEPTABLE, desc = "Оба изменения сохранены")
-@Outcome(id = "1", expect = Expect.ACCEPTABLE_INTERESTING, desc = "Потерянное изменение")
+@Outcome(id = "2", expect = Expect.ACCEPTABLE, desc = "Оба инкремента сохранены: итоговое значение 2")
+@Outcome(id = "1", expect = Expect.ACCEPTABLE_INTERESTING, desc = "Один инкремент потерян: осталось значение 1")
 @Outcome(expect = Expect.FORBIDDEN, desc = "Прочие исходы")
 @State
 public class IncrementVolatile {

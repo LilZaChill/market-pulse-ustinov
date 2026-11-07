@@ -7,10 +7,15 @@ import org.openjdk.jcstress.annotations.Outcome;
 import org.openjdk.jcstress.annotations.State;
 import org.openjdk.jcstress.infra.results.I_Result;
 
-/** Одноразовая публикация: читатель проверяет флаг ровно один раз, без spin. */
+/**
+ * Чтение установленного volatile-флага публикует предшествующую запись данных.
+ *
+ * <p>Сравнить с PublicationPlain: меняется только объявление ready.
+ */
 @JCStressTest
-@Outcome(id = {"-1", "42"}, expect = Expect.ACCEPTABLE, desc = "Флаг ещё не виден или данные опубликованы")
-@Outcome(id = "0", expect = Expect.FORBIDDEN, desc = "Флаг виден, данные не видны")
+@Outcome(id = "-1", expect = Expect.ACCEPTABLE, desc = "Читатель не увидел установленный флаг")
+@Outcome(id = "42", expect = Expect.ACCEPTABLE, desc = "Читатель увидел флаг и записанные данные")
+@Outcome(id = "0", expect = Expect.FORBIDDEN, desc = "Флаг true, но data содержит исходное значение 0")
 @Outcome(expect = Expect.FORBIDDEN, desc = "Прочие исходы")
 @State
 public class PublicationVolatile {
@@ -25,6 +30,7 @@ public class PublicationVolatile {
 
     @Actor
     public void reader(I_Result result) {
+        // -1 — служебный исход: флаг не установлен, data не читаем.
         result.r1 = ready ? data : -1;
     }
 }
