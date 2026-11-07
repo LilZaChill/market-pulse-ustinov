@@ -75,12 +75,15 @@ def restyle(presentation):
     s=find('Подписки на котировки')
     clean(s,'Подписки на котировки','Указываем тикер, интервал обновления и срок подписки')
     s.shapes.add_picture(terminal(),Inches(.9),Inches(3.4),width=Inches(12.0))
-    text(s,'Ввод доступен,\nпока запросы ждут сеть.',14,3.6,6.4,1.6,32)
-    text(s,'Не более N загрузок\nодновременно.',14,6.0,6.4,1.6,32)
-    text(s,'remove — одна подписка\nexit — весь сервис',14,8.4,6.4,1.7,31)
+    text(s,'Что означает watch?',14,3.5,6.4,.6,30,True)
+    text(s,'SBER: первый запрос готов сразу, затем обновляем через 3 с после ответа. Подписка действует 30 с.',14,4.2,6.4,2.0,26)
+    text(s,'Как поступают результаты?',14,6.5,6.4,.6,30,True)
+    text(s,'Цены печатаются по готовности. Ввод доступен; одновременно выполняется не более N загрузок.',14,7.2,6.4,1.9,26)
+    text(s,'Как остановить?',14,9.4,6.4,.6,30,True)
+    text(s,'remove отменяет одну подписку и её запрос. exit завершает весь сервис.',14,10.05,6.4,1.4,26)
 
     s=find('Как устроим решение')
-    clean(s,'Как устроим решение','Платформенные потоки: ввод, диспетчер и N работников')
+    clean(s,'Как устроим решение','Диспетчер хранит расписание подписок; работники выполняют только готовые HTTP-задачи')
     box(s,'Основной поток\nstdin',1.0,4.4,3.4,1.4,'DDEBF7')
     box(s,'Диспетчер\nсроки и интервалы',6.0,4.4,3.8,1.4,'E2EFD9')
     line(s,4.4,5.1,6.0,5.1,True);text(s,'watch / remove',4.35,3.6,2.2,.5,19)
@@ -98,25 +101,38 @@ def restyle(presentation):
     for y in [4.275,6.175,8.075]:line(s,15.2,y,16,y,True)
     text(s,'pop',14.35,3.5,1.0,.5,20)
     line(s,18,8.75,18,9.4);line(s,18,9.4,7.9,9.4);line(s,7.9,9.4,7.9,5.8,True)
-    text(s,'завершение → следующий срок обновления',9.0,9.6,10,.7,25)
-    text(s,'Нет задач → worker паркуется. Появилась задача → unpark.',1.0,10.8,19.8,.7,28)
+    text(s,'после ответа: обновить nextRun и разбудить диспетчер',8.5,9.6,11.5,.7,24)
+    text(s,'Готовая загрузка попадает в стек: последняя поставленная задача извлекается первой (LIFO).\nРаботник без задач паркуется. submit публикует задачу и вызывает unpark.',1.0,10.55,19.8,1.2,25)
 
     s=find('Когда выполнять следующее обновление?')
-    clean(s,'Когда запускать обновление?','Интервал считаем после ответа: одна загрузка на подписку, без перекрытия')
-    text(s,'Диспетчер',.9,3.8,2.7,.6,27)
-    text(s,'Работник',.9,6.3,2.7,.6,27)
-    line(s,3.5,4.3,20.1,4.3,True);line(s,3.5,6.9,20.1,6.9,True)
-    box(s,'запрос 1',4.2,6.35,3.3,1.1,'DDEBF7',27)
-    box(s,'запрос 2',12.5,6.35,3.3,1.1,'DDEBF7',27)
-    for x in [4.2,12.5]:
-        line(s,x,4.3,x,6.35,True)
-        text(s,'submit',x+.15,4.65,1.7,.5,23)
-    line(s,7.5,5.8,12.5,5.8)
-    line(s,7.5,5.55,7.5,6.05);line(s,12.5,5.55,12.5,6.05)
-    text(s,'интервал 3 с',8.4,4.9,3.5,.6,27)
-    text(s,'работник свободен',8.0,7.8,4.5,.6,25)
-    text(s,'Срок истёк → новые загрузки не начинаем; уже начатую разрешаем закончить.',1.0,9.15,19.5,.9,29)
-    text(s,'remove TICKER → отмена подписки и её запроса.  exit → остановка всех потоков.',1.0,10.4,19.5,.9,28)
+    clean(s,'Когда запускать обновление?','Возможный порядок для двух подписок и одного работника. HTTP-запрос условно занимает 2 с.')
+    x0=1.0
+    scale=2.4
+    def segment(label,start,end,y,fill,size=26):
+        box(s,label,x0+start*scale,y,(end-start)*scale-.06,.95,fill,size)
+    # Parallel state lanes, like the virtual-thread switching diagram in the reference deck.
+    segment('HTTP-запрос',0,2,4.0,'DDEBF7')
+    segment('Интервал 3 с',2,5,4.0,'FFF2CC')
+    segment('HTTP-запрос',5,7,4.0,'DDEBF7')
+    segment('Интервал…',7,8,4.0,'FFF2CC',21)
+    text(s,'Подписка SBER · обновление через 3 с после ответа',10.8,5.0,9.4,.55,23)
+    segment('Ждёт работника',0,2,5.8,'EEEEEE',24)
+    segment('HTTP-запрос',2,4,5.8,'E2EFD9')
+    segment('Интервал 5 с…',4,8,5.8,'FFF2CC')
+    text(s,'Подписка GAZP · обновление через 5 с после ответа',10.8,6.8,9.4,.55,23)
+    segment('SBER',0,2,7.6,'DDEBF7')
+    segment('GAZP',2,4,7.6,'E2EFD9')
+    segment('park',4,5,7.6,'EEEEEE')
+    segment('SBER',5,7,7.6,'DDEBF7')
+    segment('park',7,8,7.6,'EEEEEE')
+    text(s,'Один платформенный работник',13.0,8.6,7.2,.55,23)
+    line(s,x0,9.45,20.55,9.45,True)
+    for second in [0,2,4,5,7,8]:
+        x=x0+second*scale
+        line(s,x,9.35,x,9.55)
+        text(s,str(second),x-.15,9.65,.6,.4,20)
+    text(s,'t, с',20.65,9.2,.9,.6,23)
+    text(s,'Интервал относится к подписке: пока SBER ждёт обновления, работник может загрузить GAZP.\nКогда готовых задач нет, работник паркуется. Ожидание интервала не занимает работника.',1.0,10.4,19.8,1.3,26)
     for slide in list(presentation.slides):
         if any(sh.has_text_frame and sh.text=='Тестируем многопоточность' for sh in slide.shapes):
             element=next(el for el in presentation.slides._sldIdLst if el.rId==next(
@@ -126,7 +142,7 @@ def restyle(presentation):
     # Refresh both inherited number placeholders and the explicitly added number boxes.
     for number,slide in enumerate(presentation.slides,1):
         for shape in slide.shapes:
-            if shape.has_text_frame and shape.text.strip().isdigit():
+            if shape.has_text_frame and shape.text.strip().isdigit() and shape.top > presentation.slide_height - Inches(1.3):
                 for paragraph in shape.text_frame.paragraphs:
                     if paragraph.runs:
                         paragraph.runs[0].text=str(number)
