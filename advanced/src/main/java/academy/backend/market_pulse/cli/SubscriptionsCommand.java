@@ -11,7 +11,7 @@ import java.util.regex.Pattern;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
-/** Интерактивный пример семинара 10: watch TICKER INTERVAL LIFETIME / exit. */
+/** Интерактивный пример семинара 10: watch TICKER INTERVAL LIFETIME / remove TICKER / exit. */
 @Command(name = "subscriptions", description = "Временные подписки на котировки через учебный пул")
 public final class SubscriptionsCommand implements java.util.concurrent.Callable<Integer> {
     private static final Pattern DURATION = Pattern.compile("([1-9][0-9]*)(ms|s|m|h)");
@@ -32,7 +32,7 @@ public final class SubscriptionsCommand implements java.util.concurrent.Callable
                 .filter(quote -> quote.getInstrument().getTicker().equalsIgnoreCase(ticker))
                 .findFirst().orElseThrow(() -> new IllegalArgumentException("Тикер не найден: " + ticker))
                 .getPrice(), System.out::println)) {
-            System.out.println("watch SBER 3s 30s — интервал после ответа и общий срок; exit — остановить всё");
+            System.out.println("watch SBER 3s 30s — интервал после ответа и общий срок; remove SBER — отменить подписку; exit — остановить всё");
             var input = new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8));
             String line;
             while ((line = input.readLine()) != null) {
@@ -44,8 +44,14 @@ public final class SubscriptionsCommand implements java.util.concurrent.Callable
                     continue;
                 }
                 String[] parts = command.split("\\s+");
+                if (parts.length == 2 && parts[0].equalsIgnoreCase("remove")) {
+                    boolean removed = service.remove(parts[1]);
+                    System.out.println(removed ? "Подписка удалена: " + parts[1]
+                            : "Подписка не найдена: " + parts[1]);
+                    continue;
+                }
                 if (parts.length != 4 || !parts[0].equalsIgnoreCase("watch")) {
-                    System.out.println("Формат: watch TICKER 3s 30s; единицы ms/s/m/h; exit");
+                    System.out.println("Формат: watch TICKER 3s 30s; единицы ms/s/m/h; remove TICKER; exit");
                     continue;
                 }
                 try {

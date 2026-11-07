@@ -15,6 +15,61 @@ import org.junit.jupiter.api.Timeout;
 @Timeout(10)
 class QuoteSubscriptionServiceTest {
     @Test
+    void removeInterruptsOnlyThatSubscriptionAndAllowsRegisteringAgain() throws Exception {
+        CountDownLatch started = new CountDownLatch(1);
+        CountDownLatch cancelled = new CountDownLatch(1);
+        CountDownLatch otherUpdated = new CountDownLatch(1);
+        AtomicInteger sberCalls = new AtomicInteger();
+        try (QuoteSubscriptionService service = new QuoteSubscriptionService(2, ticker -> {
+            if (ticker.equals("SBER") && sberCalls.incrementAndGet() == 1) {
+                started.countDown();
+                try {
+                    Thread.sleep(60_000);
+                } catch (InterruptedException e) {
+                    cancelled.countDown();
+                    throw e;
+                }
+            }
+            return BigDecimal.ONE;
+        }, line -> { if (line.startsWith("[GAZP]")) { otherUpdated.countDown(); } })) {
+            service.watch("SBER", Duration.ofMillis(10), Duration.ofSeconds(5));
+            assertTrue(started.await(2, TimeUnit.SECONDS));
+            assertTrue(service.remove("sber"));
+            assertTrue(cancelled.await(2, TimeUnit.SECONDS));
+            assertFalse(service.remove("SBER"));
+            service.watch("GAZP", Duration.ofMillis(10), Duration.ofSeconds(1));
+            assertTrue(otherUpdated.await(2, TimeUnit.SECONDS));
+            service.watch("SBER", Duration.ofMillis(10), Duration.ofSeconds(1));
+        }
+    }
+
+    @Test
+    void removedQueuedSubscriptionDoesNotStart() throws Exception {
+        CountDownLatch busy = new CountDownLatch(1);
+        CountDownLatch release = new CountDownLatch(1);
+        CountDownLatch completed = new CountDownLatch(1);
+        AtomicInteger removedCalls = new AtomicInteger();
+        try (QuoteSubscriptionService service = new QuoteSubscriptionService(1, ticker -> {
+            if (ticker.equals("SBER")) {
+                busy.countDown();
+                release.await();
+            } else {
+                removedCalls.incrementAndGet();
+            }
+            return BigDecimal.ONE;
+        }, line -> completed.countDown())) {
+            service.watch("SBER", Duration.ofSeconds(1), Duration.ofSeconds(3));
+            assertTrue(busy.await(2, TimeUnit.SECONDS));
+            service.watch("GAZP", Duration.ofMillis(10), Duration.ofSeconds(3));
+            assertTrue(service.remove("GAZP"));
+            release.countDown();
+            assertTrue(completed.await(2, TimeUnit.SECONDS));
+            Thread.sleep(50);
+            assertEquals(0, removedCalls.get());
+        }
+    }
+
+    @Test
     void noOverlapAndNoQueuedRequestAfterExpiry() throws Exception {
         AtomicInteger calls = new AtomicInteger();
         CountDownLatch started = new CountDownLatch(1);

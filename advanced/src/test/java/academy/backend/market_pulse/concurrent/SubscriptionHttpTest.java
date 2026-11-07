@@ -13,13 +13,15 @@ import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.jupiter.api.Timeout;
 
 @Timeout(10)
 class SubscriptionHttpTest {
-    @Test
-    void closeCancelsHttpBeforeResponseBodyArrives() throws Exception {
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void cancellationInterruptsHttpBeforeResponseBodyArrives(boolean remove) throws Exception {
         HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         CountDownLatch request = new CountDownLatch(1);
         CountDownLatch release = new CountDownLatch(1);
@@ -48,7 +50,13 @@ class SubscriptionHttpTest {
             try {
                 service.watch("SBER", Duration.ofSeconds(1), Duration.ofMinutes(1));
                 assertTrue(request.await(2, TimeUnit.SECONDS));
-                assertTimeoutPreemptively(Duration.ofSeconds(2), service::close);
+                assertTimeoutPreemptively(Duration.ofSeconds(2), () -> {
+                    if (remove) {
+                        assertTrue(service.remove("SBER"));
+                    } else {
+                        service.close();
+                    }
+                });
             } finally {
                 release.countDown();
                 server.stop(0);

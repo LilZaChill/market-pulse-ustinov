@@ -32,6 +32,8 @@ public final class QuoteSubscriptionService implements AutoCloseable {
         private final long expiresAt;
         private long nextRun;
         private boolean inFlight;
+        private boolean cancelled;
+        private Thread runner;
 
         private Subscription(String ticker, long interval, long lifetime) {
             this.ticker = ticker;
@@ -64,6 +66,27 @@ public final class QuoteSubscriptionService implements AutoCloseable {
             }
             subscriptions.put(normalized, new Subscription(normalized, delay, ttl));
             gate.notifyAll();
+        }
+    }
+
+    /** Отмена одной подписки: queued-задача проверит cancelled, выполняющаяся получит interrupt. */
+    public boolean remove(String ticker) {
+        String normalized = Objects.requireNonNull(ticker).trim().toUpperCase(Locale.ROOT);
+        synchronized (gate) {
+            if (closed) {
+                throw new IllegalStateException("Сервис закрыт");
+            }
+            Subscription subscription = subscriptions.remove(normalized);
+            if (subscription == null) {
+                return false;
+            }
+            subscription.cancelled = true;
+            // Под gate runner не успеет закончить эту задачу и начать другую до interrupt.
+            if (subscription.runner != null) {
+                subscription.runner.interrupt();
+            }
+            gate.notifyAll();
+            return true;
         }
     }
 
@@ -131,25 +154,32 @@ public final class QuoteSubscriptionService implements AutoCloseable {
         try {
             synchronized (gate) {
                 // Срок мог истечь, пока задача лежала в стеке.
-                if (closed || System.nanoTime() - subscription.expiresAt >= 0) {
+                if (closed || subscription.cancelled || System.nanoTime() - subscription.expiresAt >= 0) {
                     return;
                 }
+                subscription.runner = Thread.currentThread();
             }
             BigDecimal price = loader.load(subscription.ticker);
-            if (!Thread.currentThread().isInterrupted()) {
-                output.accept("[" + subscription.ticker + "] " + price);
-            }
+            emit(subscription, "[" + subscription.ticker + "] " + price);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         } catch (Exception error) {
-            if (!Thread.currentThread().isInterrupted()) {
-                output.accept("[" + subscription.ticker + "] Ошибка: " + error.getMessage());
-            }
+            emit(subscription, "[" + subscription.ticker + "] Ошибка: " + error.getMessage());
         } finally {
             synchronized (gate) {
+                subscription.runner = null;
                 subscription.inFlight = false;
                 subscription.nextRun = System.nanoTime() + subscription.interval; // fixed delay
                 gate.notifyAll();
+            }
+        }
+    }
+
+    private void emit(Subscription subscription, String line) {
+        synchronized (gate) {
+            if (!closed && !subscription.cancelled && !Thread.currentThread().isInterrupted()) {
+                // Короткий вывод согласован с remove: после возврата remove новых сообщений нет.
+                output.accept(line);
             }
         }
     }

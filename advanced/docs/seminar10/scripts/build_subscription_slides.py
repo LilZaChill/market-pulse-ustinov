@@ -97,24 +97,13 @@ arrow(s,6.7,4.9,1.0,.5);arrow(s,13.7,4.9,1.0,.5)
 text(s,'shutdown: запретить submit → очистить стек → interrupt / unpark → join',1.0,7.5,19.5,1.4,31)
 text(s,'Учебные ограничения: LIFO без справедливости, неограниченный стек, пробуждение всех работников.\nНа следующем семинаре сравним с ExecutorService и ScheduledExecutorService.',1.0,9.2,19.5,1.6,27)
 s=slide('Проверим подписки в работе','Несколько инструментов, медленный ответ и exit во время загрузки',True);final.append(s)
-s=slide('Тестируем многопоточность','jcstress исследует наблюдаемые исходы небольших конкурентных программ')
-test_slide=s
-rect(s,'Actor 1\nпишет x, читает y',1.0,4.3,5.5,1.8,fill='blue',size=30)
-rect(s,'Actor 2\nпишет y, читает x',1.0,6.6,5.5,1.8,fill='blue',size=30)
-arrow(s,7.0,5.5,1.3,.7)
-rect(s,'Общий state\nрезультат (r1, r2)',8.8,5.4,5.0,1.8,fill='gray',size=28)
-arrow(s,14.25,5.5,1.3,.7)
-rect(s,'Разрешённый\nРедкий, но разрешённый\nЗапрещённый',16.0,4.7,4.5,3.2,fill='yellow',size=25)
-text(s,'Много запусков, разные режимы JVM. Исходы классифицируем заранее.',1.0,9.0,19.8,.8,29)
-text(s,'Не встретили ошибку ≠ доказали корректность. JMH измеряет скорость, jcstress — исходы.',1.0,10.2,19.8,.8,26)
 # Insert the introduction after the existing seminar plan, and the implementation after the last HB slide.
 ids=list(p.slides._sldIdLst)
 intro_ids=ids[len(original):len(original)+len(intro)]
-final_ids=ids[len(original)+len(intro):-1]
-test_id=ids[-1]
+final_ids=ids[len(original)+len(intro):]
 hb=max(i for i,s in enumerate(original) if any(sh.has_text_frame and sh.text.strip()=='Happens-Before' for sh in s.shapes))
 first_experiment=next(i for i,s in enumerate(original) if any(sh.has_text_frame and sh.text.startswith('Каков результат выполнения') for sh in s.shapes))
-order=ids[:3]+intro_ids+ids[3:first_experiment]+[test_id]+ids[first_experiment:hb+1]+final_ids+ids[hb+1:len(original)]
+order=ids[:3]+intro_ids+ids[3:hb+1]+final_ids+ids[hb+1:len(original)]
 for el in list(p.slides._sldIdLst):p.slides._sldIdLst.remove(el)
 for el in order:p.slides._sldIdLst.append(el)
 # Correct slide number placeholders, keeping all other original text untouched.
@@ -125,7 +114,7 @@ for number,s in enumerate(p.slides,1):
                 if para.runs:
                     para.runs[0].text=str(number)
                     for run in para.runs[1:]:run.text=''
-    if s in intro or s in final or s == test_slide:
+    if s in intro or s in final:
         text(s,str(number),W-1.3,H-.6,.6,.3,12)
 # Presenter notes tie existing theory to the ongoing code, without demo links on slides.
 notes={
@@ -141,5 +130,7 @@ for s in original:
         if title in texts:
             tf=s.notes_slide.notes_text_frame
             if tf:tf.text=(tf.text+'\n'+note).strip()
+from restyle_subscription_intro import restyle
+restyle(p)
 p.save(destination)
 print(f'{len(original)} → {len(p.slides)} slides: {destination}')
