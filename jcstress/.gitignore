@@ -1,3 +1,4 @@
 target/
 results/
 jcstress-results-*.bin.gz
+results-*/

@@ -60,3 +60,12 @@ docker compose -f docker/mockserver/docker-compose.yml down
 IDE задать `MARKET_PULSE_MOCK_SCENARIO=slow`, аргумент Main — `snapshot`.
 Вводить `show` во время первой загрузки, после неё и во время следующей; `exit` отменяет запрос
 и ожидает завершения фонового работника. Существующие ok/error/timeout не меняются.
+
+
+### Семинар 10: подписки через свой пул
+
+При сценарии `MARKET_PULSE_MOCK_SCENARIO=slow` запустите `demo.Main` с аргументами
+`subscriptions --workers 3`. В stdin: `watch SBER 3s 30s`, `watch GAZP 5s 1m`, затем `exit`.
+Интервал считается после ответа; новый запрос одной подписки не перекрывает предыдущий.
+Каждое обновление обращается к существующему `/v1/instruments` и выбирает нужный тикер
+из возвращаемого каталога. Exit прерывает выполняющиеся HttpClient-запросы.

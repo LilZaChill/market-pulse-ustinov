@@ -22,6 +22,7 @@ public final class CommandLineFactory {
                 .addSubcommand(new WatchCommand(config.getWatchlist(), config.getWatchlistStore(),
                         config.getWatchlistPath()))
                 .addSubcommand(new SnapshotCommand(config.getApiClient()))
+                .addSubcommand(new SubscriptionsCommand(config.getApiClient()))
                 .addSubcommand(new QuoteCommand(config.getQuoteService()))
                 .addSubcommand(new StatsCommand(config.getQuoteSource()))
                 .addSubcommand(new CompareCommand(config.getQuoteService()))
