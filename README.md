@@ -93,6 +93,6 @@ INFO: <- GET http://localhost:1080/v1/instruments: статус 500, тело 45
 ![QuoteServiceTest — все 7 проверок прошли](docs/test-results/quote-service-test.png)
 
 
-# Семинар 8: Рефакторинг
+# Семинар 9: Рефакторинг
 
 ### Выполнил рефакторинг двух файлов: PortfolioReportV1.java и InstrumentRulesV1.java
