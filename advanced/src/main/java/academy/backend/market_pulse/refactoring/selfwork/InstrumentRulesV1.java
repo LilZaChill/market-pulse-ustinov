@@ -8,41 +8,30 @@ package academy.backend.market_pulse.refactoring.selfwork;
 public class InstrumentRulesV1 {
 
     public int lotSize(String type) {
-        switch (type) {
-            case "STOCK":
-                return 10;
-            case "BOND":
-                return 1;
-            case "ETF":
-                return 1;
-            default:
-                throw new IllegalArgumentException("Неизвестный тип инструмента: " + type);
-        }
+        return rulesFor(type).lotSize();
     }
 
     public int settlementDays(String type) {
+        return rulesFor(type).settlementDays();
+    }
+
+    public String label(String type) {
+        return rulesFor(type).label();
+    }
+
+    private Rules rulesFor(String type) {
         switch (type) {
             case "STOCK":
-                return 2;
+                return new Rules(10, 2, "Акция");
             case "BOND":
-                return 1;
+                return new Rules(1, 1, "Облигация");
             case "ETF":
-                return 2;
+                return new Rules(1, 2, "Фонд");
             default:
                 throw new IllegalArgumentException("Неизвестный тип инструмента: " + type);
         }
     }
 
-    public String label(String type) {
-        switch (type) {
-            case "STOCK":
-                return "Акция";
-            case "BOND":
-                return "Облигация";
-            case "ETF":
-                return "Фонд";
-            default:
-                throw new IllegalArgumentException("Неизвестный тип инструмента: " + type);
-        }
+    private record Rules(int lotSize, int settlementDays, String label) {
     }
 }

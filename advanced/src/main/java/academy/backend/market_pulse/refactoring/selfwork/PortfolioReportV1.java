@@ -19,6 +19,21 @@ public class PortfolioReportV1 {
             sb.append("Пусто\n");
             return sb.toString();
         }
+
+        HoldingsResult result = renderHoldings(holdings);
+        sb.append(result.text());
+
+        BigDecimal totalPnl = result.totalValue().subtract(result.totalCost());
+        String totalSign = totalPnl.signum() > 0 ? "+" : "";
+        sb.append("Итого: ").append(result.totalValue().setScale(2, RoundingMode.HALF_UP))
+                .append(" (").append(totalSign).append(totalPnl.setScale(2, RoundingMode.HALF_UP)).append(")\n");
+        sb.append("Лучшая: ").append(result.best().ticker()).append("\n");
+        sb.append("Худшая: ").append(result.worst().ticker()).append("\n");
+        return sb.toString();
+    }
+
+    private HoldingsResult renderHoldings(List<Holding> holdings) {
+        StringBuilder sb = new StringBuilder();
         BigDecimal totalCost = BigDecimal.ZERO;
         BigDecimal totalValue = BigDecimal.ZERO;
         Holding best = null;
@@ -41,12 +56,10 @@ public class PortfolioReportV1 {
                 worst = h;
             }
         }
-        BigDecimal totalPnl = totalValue.subtract(totalCost);
-        String totalSign = totalPnl.signum() > 0 ? "+" : "";
-        sb.append("Итого: ").append(totalValue.setScale(2, RoundingMode.HALF_UP))
-                .append(" (").append(totalSign).append(totalPnl.setScale(2, RoundingMode.HALF_UP)).append(")\n");
-        sb.append("Лучшая: ").append(best.ticker()).append("\n");
-        sb.append("Худшая: ").append(worst.ticker()).append("\n");
-        return sb.toString();
+        return new HoldingsResult(sb.toString(), totalCost, totalValue, best, worst);
+    }
+
+    private record HoldingsResult(String text, BigDecimal totalCost, BigDecimal totalValue,
+                                  Holding best, Holding worst) {
     }
 }
